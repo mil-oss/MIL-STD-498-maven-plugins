@@ -12,7 +12,7 @@
     <artifactId>vdd-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <name>Maven Version Description Document Reporting Plugin</name>
-    <description>Generates a VDD document for your maven project (because gradle sucks)</description>
+    <description>Generates a VDD document for your maven project</description>
     
      
     <dependencies>
