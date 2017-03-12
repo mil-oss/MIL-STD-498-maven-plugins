@@ -7,7 +7,7 @@
     <packaging>pom</packaging>
     <name>Maven Version Description Document Reporting</name>
     <description>Generates a VDD document for your maven project (because gradle sucks)</description>
-   
+    <url>https://github.com/mil-oss/MIL-STD-498-maven-plugins/</url>
     <organization>
         <name>MIL-OSS</name>
         <url>http://www.mil-oss.org</url>
