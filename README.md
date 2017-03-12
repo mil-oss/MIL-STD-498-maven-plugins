@@ -1,6 +1,9 @@
 # MIL-STD-498-maven-plugins
 A collection of maven plugins to help automate the generation of MILSTD-498 software documentation artifacts
 
+[Plugin Info](https://mil-oss.github.io/MIL-STD-498-maven-plugins/vdd-maven-plugin/intro.html)
+[Example SVD](https://mil-oss.github.io/MIL-STD-498-maven-plugins/svd.html)
+
 ## Goals
 
 Maven reporting plugins that can generate the following based on repository and issue tracking information
