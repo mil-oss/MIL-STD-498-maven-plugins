@@ -5,8 +5,8 @@
     <artifactId>maven-reporting-vdd-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-    <name>Maven Version Description Document Reporting</name>
-    <description>Generates a VDD document for your maven project (because gradle sucks)</description>
+    <name>MIL-STD-498 Maven Reporting Plugins</name>
+    <description>Generates a VDD document for your maven project</description>
     <url>https://github.com/mil-oss/MIL-STD-498-maven-plugins/</url>
     <organization>
         <name>MIL-OSS</name>
@@ -42,7 +42,7 @@
             <url>https://github.com/mil-oss/MIL-STD-498-maven-plugins/releases</url>
         </site>
     </distributionManagement>
-    <inceptionYear>2008</inceptionYear>
+    <inceptionYear>2017</inceptionYear>
 
     <developers>
         <developer>
