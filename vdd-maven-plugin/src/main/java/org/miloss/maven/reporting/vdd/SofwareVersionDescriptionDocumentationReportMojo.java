@@ -13,11 +13,19 @@
  */
 package org.miloss.maven.reporting.vdd;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import org.apache.maven.reporting.AbstractMavenReport;
 import org.apache.maven.reporting.MavenReportException;
 import java.util.Locale;
+import java.util.Map;
+import org.apache.maven.doxia.parser.ParseException;
 import org.apache.maven.doxia.sink.Sink;
 import org.apache.maven.doxia.siterenderer.Renderer;
 import org.apache.maven.model.License;
@@ -26,6 +34,7 @@ import org.apache.maven.project.MavenProject;
 
 /**
  * This is our maven reporting plugin
+ *
  * @goal svd
  * @phase site
  */
@@ -56,7 +65,126 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         return null; // Nobody calls this!
     }
 
-   
+    /**
+     * @parameter expression="${scope}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File scope;
+
+    /**
+     * @parameter expression="${identification}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File identification;
+    /**
+     * @parameter expression="${systemOverview}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File systemOverview;
+    /**
+     * @parameter expression="${referencedDocuments}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File referencedDocuments;
+
+    /**
+     * Markdown with table with other than software artifacts? perhaps
+     * documentation?
+     *
+     * @parameter expression="${inventory}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File inventory;
+
+    /**
+     * intro for the maven artifact listing
+     *
+     * @parameter expression="${inventorySoftware}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File inventorySoftware;
+
+    /**
+     * intro for the issue log for items resolved since the last release
+     *
+     * @parameter expression="${changesInstalled}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File changesInstalled;
+
+    /**
+     * how to upgrade
+     *
+     * @parameter expression="${adapatationData}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File adapatationData;
+    /**
+     * related documentation
+     *
+     * @parameter expression="${relatedDocuments}"
+     * @required
+     * @readonly
+     *
+     */
+    @Parameter(required = false)
+    private File relatedDocuments;
+
+    /**
+     * related documentation
+     *
+     * @parameter expression="${installationInstructions}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File installationInstructions;
+
+    /**
+     * knownProblems
+     *
+     * @parameter expression="${knownProblems}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File knownProblems;
+
+    /**
+     * notes
+     *
+     * @parameter expression="${notes}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File notes;
+
+    /**
+     * appendix
+     *
+     * @parameter expression="${appendix}"
+     * @required
+     * @readonly
+     */
+    @Parameter(required = false)
+    private File appendix;
 
     // Abused by Maven site plugin, a '/' denotes a directory path!
     public String getOutputName() {
@@ -90,6 +218,8 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
             return;
         }
 
+        MarkdownParser2 md = new MarkdownParser2();
+
         //TODO dynamic classloading/factory pattern
         IssueProvider provider = new GitHubIssueProvider();
 
@@ -103,22 +233,49 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
 
         sink.section1();    //div
         sink.sectionTitle1();
-        sink.rawText(project.getName() + "<br>");
+        sink.rawText(project.getName());
         sink.sectionTitle1_();
 
+        sink.paragraph();
         sink.rawText(getDescription(locale));
-        sink.rawText("<br>");
+        sink.paragraph_();
+
+        sink.paragraph();
         sink.rawText(project.getDescription());
-        sink.rawText("<br>");
+        sink.paragraph_();
+        sink.paragraph();
         sink.rawText("Version " + project.getVersion());
+        sink.paragraph_();
         sink.section1_();
 
         sink.section2();    //div
         sink.sectionTitle2();
         sink.rawText("1. Scope");
         sink.sectionTitle2_();
-        sink.rawText("This document is the Software Version Description Document (SVD) or as it is more commonly known as, the Version Description Document (VDD) for ");
-        sink.rawText(project.getName() + " version " + project.getVersion() + ". This document was produced on " + new Date().toString());
+
+        if (scope != null && scope.exists()) {
+            FileReader reader = null;
+            try {
+                reader = new FileReader(scope);
+                md.parse(reader, sink);
+            } catch (FileNotFoundException ex) {
+                getLog().error(ex);
+            } catch (ParseException ex) {
+                getLog().error(ex);
+            } catch (Exception ex) {
+                getLog().error(ex);
+            } finally {
+                try {
+                    reader.close();
+                } catch (Exception ex) {
+                    getLog().debug(ex);
+                }
+            }
+        } else {
+            sink.rawText("This document is the Software Version Description Document (SVD) or as it is more commonly known as, the Version Description Document (VDD) for ");
+            sink.rawText(project.getName() + " version " + project.getVersion() + ". This document was produced on " + new Date().toString());
+
+        }
         sink.section2_();
 
         sink.section3();
@@ -126,31 +283,26 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         sink.rawText("1.1. Identification");
         sink.sectionTitle3_();
 
-        sink.rawText("This paragraph shall contain the project ID, release precedence, "
-                + "release number, and a full identification of the system and the software, "
-                + "including, as applicable, identification number(s), title(s), abbreviation(s), "
-                + "and version number(s).  It shall also identify the intended recipients of the VDD. ");
-        //TODO this information is in the project tree
+        renderContents(md, identification, sink, "identification");
+
         sink.section3_();
 
         sink.section3();
         sink.sectionTitle3();
         sink.rawText("1.2. System Overview");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall provide a brief system overview.  It "
-                + "shall describe the general nature of the system, identify current "
-                + "and planned operating sites, and list other relevant documents.");
-        //TODO this information is not within the maven project tree, not sure 
-        //what or where to get this from...
+
+        renderContents(md, systemOverview, sink, "systemOverview");
+
         sink.section3_();
 
         sink.section2();
         sink.sectionTitle2();
         sink.rawText("2. Referenced Documents");
         sink.sectionTitle2_();
-        sink.rawText("None");
-        //TODO this information is not the project tree, we could reference other generated documents
-        //for c&p in some content from an external file
+
+        renderContents(md, referencedDocuments, sink, "referencedDocuments");
+
         sink.section2_();
 
         sink.section2();
@@ -162,68 +314,8 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         sink.sectionTitle3();
         sink.rawText("3.1  Inventory of materials released");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall list, by identifying numbers, titles, abbreviations, "
-                + "dates, version numbers, and release numbers, as applicable, "
-                + "all physical media (for example, listings, tapes, disks) and "
-                + "associated documentation that make up the software version being released.  "
-                + "It shall include applicable security and privacy considerations for these "
-                + "items, safeguards for handling them, such as concerns for static "
-                + "and magnetic fields, and instructions and restrictions regarding "
-                + "duplication and license provisions.<br><br>");
 
-        sink.sectionTitle4();
-        sink.rawText("Artifacts");
-        sink.sectionTitle4_();
-        sink.table();
-        sink.tableRow();
-        sink.tableHeaderCell();
-        sink.rawText("Group Id");
-        sink.tableHeaderCell_();
-
-        sink.tableHeaderCell();
-        sink.rawText("Artifact Id");
-        sink.tableHeaderCell_();
-
-        sink.tableHeaderCell();
-        sink.rawText("Version");
-        sink.tableHeaderCell_();
-
-        sink.tableHeaderCell();
-        sink.rawText("License");
-        sink.tableHeaderCell_();
-        sink.tableRow_();
-
-        //print out all modules in this project. note if modules are excluded due to profiles
-        //they will not be listed here
-        sink.tableRow();
-
-        sink.tableCell();
-        sink.rawText(project.getGroupId());
-        sink.tableCell_();
-
-        sink.tableCell();
-        sink.rawText(project.getArtifactId());
-        sink.tableCell_();
-
-        sink.tableCell();
-        sink.rawText(project.getVersion());
-        sink.tableCell_();
-
-        sink.tableCell();
-
-        printLicenses(sink, project.getLicenses());
-
-        sink.tableCell_();
-
-        sink.tableRow_();
-
-        for (int i = 0; i < project.getCollectedProjects().size(); i++) {
-
-            MavenProject get = (MavenProject) project.getCollectedProjects().get(i);
-            recurseModules(get, sink);
-        }
-
-        sink.table_();
+        renderContents(md, inventory, sink, "inventory");
 
         sink.section3_();       //end of x.y
 
@@ -231,27 +323,18 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         sink.sectionTitle3();
         sink.rawText("3.2  Inventory of software contents");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall list, by identifying numbers, titles, "
-                + "abbreviations, dates, version numbers, and release numbers, "
-                + "as applicable, all computer files that make up the software "
-                + "version being released.  Any applicable security and privacy"
-                + " considerations shall be included.");
-        //TODO some of this information is in the project tree and seems duplicative from the artifact list...
+
+        renderContents(md, inventorySoftware, sink, "inventorySoftware");
+
+        printProjectArtifacts(sink);
         sink.section3_();       //end of x.y
 
         sink.section3();
         sink.sectionTitle3();
         sink.rawText("3.3  Changes Installed");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall provide a brief overall summary of the "
-                + "changes incorporated into this release.   This paragraph shall "
-                + "identify, as applicable, Discrepancy Reports (DRs), System "
-                + "Advisory Notices (SANs), and Heads Up Messages (HUMs) cleared "
-                + "by the release, any modifications and enhancements incorporated, "
-                + "and the effects, if any, of each change on the end user, "
-                + "system operation and on interfaces with other hardware and "
-                + "software as applicable.  This paragraph does not normally apply"
-                + " to the initial release of the software for a system.<br><br>");
+
+        renderContents(md, changesInstalled, sink, "changesInstalled");
 
         provider.generateChangeLogContent(sink, project);
 
@@ -261,47 +344,37 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         sink.sectionTitle3();
         sink.rawText("3.4. Adapation data");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall identify or reference all unique‑to‑site "
-                + "data contained in the software version.  For software versions "
-                + "after the first, this paragraph shall describe changes made "
-                + "to the adaptation data.");
-        //TODO some of this information is in the project tree perhaps update guide?
+
+        renderContents(md, adapatationData, sink, "adapatationData");
+
         sink.section3_();       //end of x.y
 
         sink.section3();
         sink.sectionTitle3();
         sink.rawText("3.5  Related documents");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall list by identifying numbers, titles, "
-                + "abbreviations, dates, version numbers, and release numbers, "
-                + "as applicable, all documents pertinent to the software version "
-                + "being released but not included in the release.");
-        //TODO some of this information is in the project tree
+
+        renderContents(md, relatedDocuments, sink, "relatedDocuments");
+
         sink.section3_();       //end of x.y
 
         sink.section3();
         sink.sectionTitle3();
         sink.rawText("3.6 Installation Instructions");
         sink.sectionTitle3_();
-        sink.rawText("This paragraph shall list by identifying numbers, titles, "
-                + "abbreviations, dates, version numbers, and release numbers, "
-                + "as applicable, all documents pertinent to the software version "
-                + "being released but not included in the release.");
-        //TODO not sure where this comes from, but probably in the source tree
+
+        renderContents(md, installationInstructions, sink, "installationInstructions");
+
         sink.section3_();       //end of x.y
 
         sink.section3();
         sink.sectionTitle3();
         sink.rawText("3.7  Possible problems and known errors");
         sink.sectionTitle3_();
-        sink.rawText(" This paragraph shall identify any possible problems or "
-                + "known errors with the software version being released, and "
-                + "instructions (either directly or by reference) for recognizing, "
-                + "avoiding, correcting, or otherwise handling each one.  "
-                + "The information presented shall identify and be appropriate "
-                + "for those impacted.");
 
-        provider.generateOpenIssuesContent(sink, project);
+        renderContents(md, knownProblems, sink, "knownProblems");
+
+        provider.generateOpenIssuesContent(sink, project, true);
 
         sink.section3_();       //end of x.y
 
@@ -311,25 +384,18 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         sink.sectionTitle2();
         sink.rawText("4. Notes");
         sink.sectionTitle2_();
-        sink.rawText("This section shall contain any general information that "
-                + "aids in understanding this document (e.g., background information, "
-                + "glossary, rationale).  This section shall include an alphabetical "
-                + "listing of all acronyms, abbreviations, and their meanings as "
-                + "used in this document and a list of any terms and definitions "
-                + "needed to understand this document.");
+
+        renderContents(md, notes, sink, "notes");
+
         sink.section2_();
 
         sink.section2();
         sink.sectionTitle2();
-        sink.rawText("A. Appendixes");
+        sink.rawText("Appendixes");
         sink.sectionTitle2_();
-        sink.rawText("Appendixes may be used to provide information published "
-                + "separately for convenience in document maintenance (e.g., charts, "
-                + "classified data).  As applicable, each appendix shall be referenced "
-                + "in the main body of the document where the data would normally have "
-                + "been provided.  Appendixes may be bound as separate documents "
-                + "for ease in handling.  Appendixes shall be lettered alphabetically "
-                + "(A, B, etc.).");
+
+        renderContents(md, appendix, sink, "appendix");
+
         sink.section2_();
 
         sink.body_();
@@ -389,4 +455,102 @@ public class SofwareVersionDescriptionDocumentationReportMojo extends AbstractMa
         }
 
     }
+
+    private void printProjectArtifacts(Sink sink) {
+        sink.table();
+        sink.tableRow();
+        sink.tableHeaderCell();
+        sink.rawText("Group Id");
+        sink.tableHeaderCell_();
+
+        sink.tableHeaderCell();
+        sink.rawText("Artifact Id");
+        sink.tableHeaderCell_();
+
+        sink.tableHeaderCell();
+        sink.rawText("Version");
+        sink.tableHeaderCell_();
+
+        sink.tableHeaderCell();
+        sink.rawText("License");
+        sink.tableHeaderCell_();
+        sink.tableRow_();
+
+        //print out all modules in this project. note if modules are excluded due to profiles
+        //they will not be listed here
+        sink.tableRow();
+
+        sink.tableCell();
+        sink.rawText(project.getGroupId());
+        sink.tableCell_();
+
+        sink.tableCell();
+        sink.rawText(project.getArtifactId());
+        sink.tableCell_();
+
+        sink.tableCell();
+        sink.rawText(project.getVersion());
+        sink.tableCell_();
+
+        sink.tableCell();
+
+        printLicenses(sink, project.getLicenses());
+
+        sink.tableCell_();
+
+        sink.tableRow_();
+
+        for (int i = 0; i < project.getCollectedProjects().size(); i++) {
+
+            MavenProject get = (MavenProject) project.getCollectedProjects().get(i);
+            recurseModules(get, sink);
+        }
+
+        sink.table_();
+    }
+
+    private void renderContents(MarkdownParser2 md, File file, Sink sink, String systemOverview0) {
+
+        if (file != null && file.exists()) {
+            FileReader reader = null;
+            try {
+                if (file.getName().endsWith(".vm")) {
+                    //filered 
+                    //project.getProperties() these are things that could be filtered
+                    //buffer the input file
+                    //find and replace for all properties plus the usually markers
+                    String content = new String(Files.readAllBytes(Paths.get(file.toURI())));
+                    Iterator<Map.Entry<Object, Object>> iterator = project.getProperties().entrySet().iterator();
+                    while (iterator.hasNext()) {
+                        Map.Entry<Object, Object> next = iterator.next();
+                        content = content.replace("${" + next.getKey().toString() + "}", next.getValue().toString());
+                    }
+                    content = content.replace("${project.version}", project.getVersion());
+                    content = content.replace("${project.parent.version}", project.getVersion());
+                    content = content.replace("${project.groupId}", project.getGroupId());
+                    content = content.replace("${project.parent.groupId}", project.getGroupId());
+                    
+                    md.parse(content, sink);
+                } else {
+                    reader = new FileReader(file);
+                    md.parse(reader, sink);
+                }
+            } catch (FileNotFoundException ex) {
+                getLog().error(ex);
+            } catch (ParseException ex) {
+                getLog().error(ex);
+            } catch (Exception ex) {
+                getLog().error(ex);
+            } finally {
+                try {
+                    reader.close();
+                } catch (Exception ex) {
+                    getLog().debug(ex);
+                }
+            }
+        } else {
+            sink.rawText("No content was defined via the '" + systemOverview0 + "' configuration parameter");
+        }
+    }
+
 }

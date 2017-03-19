@@ -32,8 +32,9 @@ public interface IssueProvider {
      * Use {@link Sink#listItem()} and {@link Sink#listItem_()} per issue
      * @param sink
      * @param project 
+     * @param bugsOnly if true, only issues that are considered bugs are outputted
      */
-    void generateOpenIssuesContent(Sink sink, MavenProject project);
+    public void generateOpenIssuesContent(Sink sink, MavenProject project, boolean bugsOnly);
 
     /**
      * Outputs the change log for at least the past version and the current 
@@ -44,5 +45,7 @@ public interface IssueProvider {
      * @param sink
      * @param project 
      */
-    void generateChangeLogContent(Sink sink, MavenProject project);
+    public void generateChangeLogContent(Sink sink, MavenProject project);
+
+    public void generateSourceChangeLog(Sink sink, MavenProject project);
 }

@@ -1,0 +1,36 @@
+This is an example ** installation instructions ** defined in src/svd/installationInstructions.md. 
+Since it's markdown, any valid content will do. It uses the same doxia renderer 
+as the maven site plugin.
+
+This paragraph shall list by identifying numbers, titles, 
+abbreviations, dates, version numbers, and release numbers, 
+as applicable, all documents pertinent to the software version 
+being released but not included in the release.
+
+Since this document is referencing the MIL-STD-498 Maven Plugins, we'll briefly discuss how 
+to use it on your project.
+
+From your parent `pom.xml` file, add the following:
+
+    <project>
+        ...
+        <reporting>
+            <plugins>
+                ....
+                <plugin>
+                    <groupId>org.mil-oss</groupId>
+                    <artifactId>vdd-maven-plugin</artifactId>
+                    <version>${project.version}</version>
+                    <reportSets>
+                        <reportSet>
+                            <reports>
+                                <report>svd</report>
+                            </reports>
+                        </reportSet>
+                    </reportSets>
+                </plugin>
+                ...
+            </plugins>
+        </reporting>
+    </project>
+	

@@ -16,7 +16,9 @@ package org.miloss.maven.reporting.vdd;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -40,12 +42,13 @@ import org.miloss.github.Release;
 
 /**
  * Issue provider for github
+ *
  * @author AO
  */
-public class GitHubIssueProvider implements IssueProvider{
+public class GitHubIssueProvider implements IssueProvider {
 
     @Override
-    public void generateOpenIssuesContent(Sink sink, MavenProject project) {
+    public void generateOpenIssuesContent(Sink sink, MavenProject project, boolean bugsOnly) {
         if ((project.getScm() != null && project.getScm().getDeveloperConnection().contains("https://github.com/"))
                 || (project.getIssueManagement() != null && project.getIssueManagement().getUrl().contains("https://github.com/"))) {
 
@@ -73,14 +76,14 @@ public class GitHubIssueProvider implements IssueProvider{
                 sink.list();
                 for (int i = 0; i < issues1.size(); i++) {
                     Issue get = issues1.get(i);
-                    if (hasBugLabel(get.getLabels())) {
+                    if ((bugsOnly && hasBugLabel(get.getLabels())) || !bugsOnly) {
                         sink.listItem();
-                           sink.link(get.getHtmlUrl());
+                        sink.link(get.getHtmlUrl());
                         sink.rawText("[#" + get.getNumber() + "] ");
                         sink.link_();
-                        
+
                         sink.rawText(get.getTitle() + " ");
-                     
+
                         sink.listItem_();
                     }
 
@@ -141,13 +144,11 @@ public class GitHubIssueProvider implements IssueProvider{
                         return 0;
                     }
                 });
-               // System.out.println(myObjects.size() + " releases discovered");
+                // System.out.println(myObjects.size() + " releases discovered");
 
                 //get the change log from now up until the last release (which is probably now)
                 //if the issue list is empty, skip
                 //[Unreleased](https://github.com/mil-oss/fgsms/tree/HEAD)
-                
-
                 if (toBeForked == null) {
                     throw new Exception("Unable to identify the Github repository, try setting the scm developer connection or the issue management url in the pom");
                 }
@@ -184,10 +185,13 @@ public class GitHubIssueProvider implements IssueProvider{
                         sink.rawText("Release " + get.getName() + " " + get.getReleaseDate().toString());
                         sink.bold_();
                         sink.rawText("<br>");
-                        
+
                         sink.list();
                         processIssues(issues, from, until, sink);
                         sink.list_();
+                        if (!releases.get(i + 1).getPrerelease()) {
+                            break;
+                        }
 
                     }
                 }
@@ -198,8 +202,7 @@ public class GitHubIssueProvider implements IssueProvider{
             }
         }
     }
- 
-    
+
     private static String getRepoUrl(MavenProject project) {
 
         if (project != null && project.getIssueManagement() != null && project.getIssueManagement().getUrl() != null) {
@@ -279,7 +282,7 @@ public class GitHubIssueProvider implements IssueProvider{
         }
         return count;
     }
-    
+
     private RepositoryId getRepo(MavenProject project) {
 
         if (project != null && project.getIssueManagement() != null && project.getIssueManagement().getUrl() != null) {
@@ -335,5 +338,105 @@ public class GitHubIssueProvider implements IssueProvider{
             }
         }
         return false;
+    }
+
+    @Override
+    public void generateSourceChangeLog(final Sink sink, MavenProject project) {
+        ////git --no-pager log  --date=iso-strict --since=2016-03-11T21:33:56-05:00 --oneline --decorate=short
+        //find the last release and get the time stamp
+
+        if ((project.getScm() != null && project.getScm().getDeveloperConnection().contains("https://github.com/"))
+                || (project.getIssueManagement() != null && project.getIssueManagement().getUrl().contains("https://github.com/"))) {
+
+            try {
+
+                //OAuth2 token authentication
+                GitHubClient client = new GitHubClient();
+                String token = System.getenv("TOKEN");
+                if (System.getProperty("TOKEN") != null) {
+                    token = System.getProperty("TOKEN");
+                }
+
+                client.setOAuth2Token(token);
+
+                RepositoryId toBeForked = RepositoryId.createFromUrl(getRepoUrl(project));
+                String githubUrl = getRepoUrl(project);
+                githubUrl = githubUrl.substring(0, githubUrl.length() - 6);
+
+                if (toBeForked == null) {
+                    throw new Exception("Unable to identify the Github repository, try setting the scm developer connection or the issue management url in the pom");
+                }
+
+                ObjectMapper mapper = new ObjectMapper();
+                mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+                mapper.configure(DeserializationFeature.FAIL_ON_IGNORED_PROPERTIES, false);
+
+                String url = "https://api.github.com/repos/" + toBeForked.generateId() + "/releases";
+
+                URL git = new URL(url);
+                InputStream openStream = git.openStream();
+                List<Release> releases = mapper.readValue(openStream, new TypeReference<ArrayList<Release>>() {
+                });
+                openStream.close();
+
+                //sort the releases by release date.
+                Collections.sort(releases, new Comparator<Release>() {
+                    @Override
+                    public int compare(Release o1, Release o2) {
+                        try {
+                            return o2.getReleaseDate().compareTo(o1.getReleaseDate());
+                        } catch (ParseException ex) {
+                            Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, ex);
+                        }
+                        return 0;
+                    }
+                });
+
+                //if there's no releases, print everything
+                String cmd = null;
+                ProcessBuilder builder = null;
+                if (releases == null || releases.isEmpty()) {
+                    builder = new ProcessBuilder("git", "--no-pager", "log", "--date=iso-strict", "--oneline", "--decorate=short");
+
+                } else if (releases.size() == 1) {
+                    //if there's 1 release 
+                    builder = new ProcessBuilder("git", "--no-pager", "log", "--date=iso-strict", "--oneline", "--decorate=short", "--since", releases.get(0).getPublishedAt());
+
+                } else {
+                    //more than 1 release
+                    //find the first release that wasn't in the past 48 hours that was not a draft release
+                    //assuming we're pretty close to the last release, therefore g
+                    builder = new ProcessBuilder("git", "--no-pager", "log", "--date=iso-strict", "--oneline", "--decorate=short", "--since", releases.get(1).getPublishedAt());
+                }
+
+                final Process process = builder.start();
+                final Thread ioThread = new Thread() {
+                    @Override
+                    public void run() {
+                        try {
+                            final BufferedReader reader = new BufferedReader(
+                                    new InputStreamReader(process.getInputStream()));
+                            String line = null;
+                            while ((line = reader.readLine()) != null) {
+                                sink.listItem();
+                                sink.rawText(line);
+                                //System.out.println(line);
+                                sink.listItem_();
+                            }
+                            reader.close();
+                        } catch (final Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                };
+                ioThread.start();
+
+                process.waitFor();
+
+                //then print all the issues since that time stamp.
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
     }
 }

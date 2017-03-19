@@ -106,9 +106,11 @@
                     <artifactId>maven-site-plugin</artifactId>
                     <version>3.6</version>
                 </plugin>
-                
             </plugins>
         </pluginManagement>
+    
+              
+            
     </build>
     <modules>
         <module>vdd-maven-plugin</module>
@@ -116,6 +118,17 @@
     </modules>
     <reporting>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-changes-plugin</artifactId>
+                <version>2.12.1</version>
+                <configuration>
+                    <onlyMilestoneIssues>false</onlyMilestoneIssues>
+                    <includeOpenIssues>true</includeOpenIssues>
+                </configuration>
+            </plugin>
+            
+            
             <plugin>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>vdd-maven-plugin</artifactId>
@@ -127,7 +140,26 @@
                         </reports>
                     </reportSet>
                 </reportSets>
+                <configuration>
+                    <scope>${basedir}//src/svd/1.0.scope.md</scope>
+                    <identification>${basedir}//src/svd/1.1.identification.md</identification>
+                    <systemOverview>${basedir}//src/svd/1.2.systemOverview.md</systemOverview>
+                    <referencedDocuments>${basedir}//src/svd/2.0.referencedDocuments.md</referencedDocuments>
+                    <inventory>${basedir}//src/svd/3.1.inventory.md</inventory>
+                    <inventorySoftware>${basedir}//src/svd/3.2.softwareInventory.md</inventorySoftware>
+                    <changesInstalled>${basedir}//src/svd/3.3.changesInstalled.md</changesInstalled>
+                    <adapatationData>${basedir}//src/svd/3.4.adaptationData.md</adapatationData>
+                    <relatedDocuments>${basedir}//src/svd/3.5.relatedDocuments.md</relatedDocuments>
+                    <installationInstructions>${basedir}//src/svd/3.6.installationInstructions.md.vm</installationInstructions>
+                    <knownProblems>${basedir}//src/svd/3.7.knownProblems.md</knownProblems>
+                    <notes>${basedir}//src/svd/4.notes.md</notes>
+                    <appendix>${basedir}//src/svd/A.appendix.md</appendix>
+
+
+                </configuration>
             </plugin>
+            
+         
         </plugins>
     </reporting>
 </project>
